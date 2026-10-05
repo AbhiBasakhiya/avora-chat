@@ -3,211 +3,565 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>AVORA Chat</title>
+  <meta name="theme-color" content="#0b0b10">
+  <title>AVORA — Realtime AI Chat</title>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0;width:100%;height:100%;background:#121212;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-    .app{width:100%;max-width:650px;height:100dvh;margin:0 auto;display:flex;flex-direction:column}
-    header{flex:0 0 auto;padding:18px 16px 12px;text-align:center;border-bottom:1px solid #292929}
-    h1{margin:0;color:#6d63ff;font-size:32px;line-height:1.2}
-    #status{margin-top:6px;font-size:15px;color:#888;min-height:20px}
-    #status.ok{color:#4ade80}
-    #status.error{color:#f87171}
-    #chat-box{flex:1;min-height:0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch}
-    .message{padding:10px 13px;background:#252525;border-radius:10px;word-break:break-word;max-width:90%;align-self:flex-start;white-space:pre-wrap}
-    .empty{margin:auto;color:#777;text-align:center}
-    .input-container{flex:0 0 auto;display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#181818;border-top:1px solid #292929}
-    input{flex:1;min-width:0;padding:15px;border:1px solid #383838;border-radius:16px;background:#252525;color:#fff;font-size:17px;outline:none}
-    input:focus{border-color:#5b52ff}
-    button{flex:0 0 auto;min-width:120px;border:0;border-radius:16px;padding:0 22px;background:#5146e5;color:#fff;font-size:17px;font-weight:700}
-    button:disabled{opacity:.55}
-    @media(max-width:420px){h1{font-size:28px}button{min-width:105px;padding:0 16px}}
+    * { box-sizing: border-box; }
+
+    :root {
+      --bg: #09090d;
+      --panel: #111118;
+      --panel-2: #171720;
+      --border: rgba(255,255,255,.09);
+      --text: #f7f7fb;
+      --muted: #8f909d;
+      --accent: #6d5dfc;
+      --accent-2: #8b7dff;
+      --user: #6758f5;
+      --ai: #1c1c25;
+      --danger: #ff7777;
+      --success: #54d98b;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    body {
+      min-height: 100dvh;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 760px;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      background:
+        radial-gradient(circle at 50% -10%, rgba(109,93,252,.20), transparent 38%),
+        var(--bg);
+    }
+
+    header {
+      flex: 0 0 auto;
+      padding: calc(14px + env(safe-area-inset-top)) 18px 13px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(9,9,13,.82);
+      backdrop-filter: blur(18px);
+      text-align: center;
+    }
+
+    .brand {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--accent), #9a8fff);
+      box-shadow: 0 8px 28px rgba(109,93,252,.30);
+      font-weight: 800;
+      font-size: 17px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 21px;
+      letter-spacing: -.4px;
+    }
+
+    #status {
+      margin-top: 5px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    #status.ok { color: var(--success); }
+    #status.error { color: var(--danger); }
+
+    #chat-box {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 18px 14px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overscroll-behavior: contain;
+    }
+
+    .empty {
+      margin: auto;
+      text-align: center;
+      color: var(--muted);
+      padding: 30px;
+    }
+
+    .message-row {
+      display: flex;
+      width: 100%;
+    }
+
+    .message-row.user {
+      justify-content: flex-end;
+    }
+
+    .message-row.ai {
+      justify-content: flex-start;
+    }
+
+    .message {
+      max-width: min(78%, 560px);
+      padding: 11px 14px;
+      border-radius: 18px;
+      line-height: 1.45;
+      font-size: 15px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      box-shadow: 0 5px 18px rgba(0,0,0,.16);
+    }
+
+    .message-row.user .message {
+      background: linear-gradient(135deg, var(--user), #5948e9);
+      color: white;
+      border-bottom-right-radius: 5px;
+    }
+
+    .message-row.ai .message {
+      background: var(--ai);
+      border: 1px solid var(--border);
+      color: #f2f2f6;
+      border-bottom-left-radius: 5px;
+    }
+
+    .sender {
+      font-size: 10px;
+      font-weight: 700;
+      margin: 0 4px 4px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .7px;
+    }
+
+    .message-wrap {
+      max-width: min(78%, 560px);
+    }
+
+    .typing {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+      padding: 13px 15px;
+      background: var(--ai);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      border-bottom-left-radius: 5px;
+    }
+
+    .typing span {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #aaa;
+      animation: pulse 1s infinite ease-in-out;
+    }
+
+    .typing span:nth-child(2) { animation-delay: .15s; }
+    .typing span:nth-child(3) { animation-delay: .3s; }
+
+    @keyframes pulse {
+      0%, 70%, 100% { opacity: .3; transform: translateY(0); }
+      35% { opacity: 1; transform: translateY(-3px); }
+    }
+
+    .composer {
+      flex: 0 0 auto;
+      padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--border);
+      background: rgba(15,15,21,.92);
+      backdrop-filter: blur(18px);
+    }
+
+    .input-row {
+      display: flex;
+      gap: 9px;
+      align-items: flex-end;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    #message-input {
+      flex: 1;
+      min-width: 0;
+      min-height: 48px;
+      max-height: 130px;
+      resize: none;
+      padding: 13px 15px;
+      border: 1px solid var(--border);
+      border-radius: 17px;
+      outline: none;
+      background: #1a1a22;
+      color: var(--text);
+      font: inherit;
+    }
+
+    #message-input:focus {
+      border-color: rgba(109,93,252,.75);
+      box-shadow: 0 0 0 3px rgba(109,93,252,.12);
+    }
+
+    #send-btn {
+      min-width: 78px;
+      height: 48px;
+      border: 0;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--accent), #5746e8);
+      color: white;
+      font-weight: 750;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    #send-btn:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    .hint {
+      text-align: center;
+      margin-top: 7px;
+      color: #666773;
+      font-size: 10px;
+    }
+
+    @media (max-width: 520px) {
+      .message, .message-wrap { max-width: 84%; }
+      #chat-box { padding-left: 10px; padding-right: 10px; }
+      .hint { display: none; }
+    }
   </style>
 </head>
-<body>
-<div class="app">
-  <header>
-    <h1>AVORA Chat</h1>
-    <div id="status">Connecting...</div>
-  </header>
 
-  <main id="chat-box">
-    <div class="empty" id="empty">Loading messages...</div>
+<body>
+  <main class="app">
+    <header>
+      <div class="brand">
+        <div class="avatar">A</div>
+        <div>
+          <h1>AVORA</h1>
+          <div id="status">Connecting…</div>
+        </div>
+      </div>
+    </header>
+
+    <section id="chat-box" aria-live="polite">
+      <div class="empty" id="empty-state">Start a conversation with AVORA.</div>
+    </section>
+
+    <form class="composer" id="composer">
+      <div class="input-row">
+        <textarea id="message-input" rows="1" maxlength="4000"
+          placeholder="Message AVORA…" autocomplete="off"></textarea>
+        <button id="send-btn" type="submit">Send</button>
+      </div>
+      <div class="hint">Mention <b>AI</b> or <b>@avora</b> to trigger AVORA.</div>
+    </form>
   </main>
 
-  <form class="input-container" id="message-form">
-    <input id="message-input" type="text" placeholder="Type a message..." autocomplete="off" maxlength="2000">
-    <button id="send-button" type="submit">Send</button>
-  </form>
-</div>
+  <script>
+    // ============================================================
+    // AVORA — GitHub Pages + Supabase
+    // ============================================================
 
-<script>
-  // ============================================================
-  // AVORA REALTIME CHAT — CORRECTED FOR YOUR ACTUAL TABLE
-  // messages columns:
-  // id (uuid, default)
-  // conversation_id (text, required)
-  // sender_id (text, required)
-  // content (text, required)
-  // created_at (timestamptz, default)
-  // ============================================================
+    const SUPABASE_URL = "https://ubhqjnxwppjeyxouhzzb.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InViaHFqbnh3cHBqZXl4b3VoenpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMDM5NjksImV4cCI6MjA1NjU3OTk2OX0.vWp3g8-G-T6d_wO4Y9bKx8n4l7m2x0c1v3b5n7m9l1k";
 
-  const SUPABASE_URL = "https://ublvdcrulqnbyxskzijj.supabase.co";
-  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_DS6HKM82o--AQTr8H82gHA_ogLRAOwE";
+    const supabaseClient = supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY
+    );
 
-  const client = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY
-  );
+    // One conversation for this browser/device.
+    // This matches the existing NOT NULL conversation_id column.
+    const CONVERSATION_ID =
+      localStorage.getItem("avora_conversation_id") || crypto.randomUUID();
 
-  const TABLE = "messages";
-  const CONVERSATION_ID = "public-avora-chat";
+    localStorage.setItem("avora_conversation_id", CONVERSATION_ID);
 
-  // Each browser gets a stable anonymous sender ID.
-  let SENDER_ID = localStorage.getItem("avora_sender_id");
-  if (!SENDER_ID) {
-    SENDER_ID = "guest-" + crypto.randomUUID();
-    localStorage.setItem("avora_sender_id", SENDER_ID);
-  }
+    // Values stored in sender_id.
+    const USER_SENDER = "User";
+    const AI_SENDER = "AVORA AI";
 
-  const chatBox = document.getElementById("chat-box");
-  const empty = document.getElementById("empty");
-  const statusEl = document.getElementById("status");
-  const form = document.getElementById("message-form");
-  const input = document.getElementById("message-input");
-  const sendButton = document.getElementById("send-button");
+    const chatBox = document.getElementById("chat-box");
+    const emptyState = document.getElementById("empty-state");
+    const input = document.getElementById("message-input");
+    const composer = document.getElementById("composer");
+    const sendBtn = document.getElementById("send-btn");
+    const statusEl = document.getElementById("status");
 
-  function setStatus(text, type="") {
-    statusEl.textContent = text;
-    statusEl.className = type;
-  }
+    let channel = null;
+    let aiBusy = false;
 
-  function scrollBottom() {
-    requestAnimationFrame(() => {
+    function setStatus(text, type = "") {
+      statusEl.textContent = text;
+      statusEl.className = type;
+    }
+
+    function escapeSafeText(text) {
+      return String(text ?? "");
+    }
+
+    function renderMessage(msg) {
+      if (!msg || !msg.content) return;
+
+      if (emptyState) {
+        emptyState.remove();
+      }
+
+      const sender = String(msg.sender_id || "").toLowerCase();
+      const isAI = sender === "avora ai" || sender === "ai" || sender === "avora";
+
+      const row = document.createElement("div");
+      row.className = "message-row " + (isAI ? "ai" : "user");
+
+      const wrap = document.createElement("div");
+      wrap.className = "message-wrap";
+
+      const label = document.createElement("div");
+      label.className = "sender";
+      label.textContent = isAI ? "AVORA AI" : "You";
+
+      const bubble = document.createElement("div");
+      bubble.className = "message";
+      bubble.textContent = escapeSafeText(msg.content);
+
+      wrap.appendChild(label);
+      wrap.appendChild(bubble);
+      row.appendChild(wrap);
+      chatBox.appendChild(row);
+
       chatBox.scrollTop = chatBox.scrollHeight;
-    });
-  }
-
-  function clearMessages() {
-    chatBox.querySelectorAll(".message").forEach(el => el.remove());
-  }
-
-  function addMessage(text) {
-    if (text == null) return;
-    empty.style.display = "none";
-
-    const div = document.createElement("div");
-    div.className = "message";
-    div.textContent = String(text);
-    chatBox.appendChild(div);
-    scrollBottom();
-  }
-
-  async function loadMessages() {
-    const { data, error } = await client
-      .from(TABLE)
-      .select("content, created_at")
-      .eq("conversation_id", CONVERSATION_ID)
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      console.error("Load error:", error);
-      clearMessages();
-      empty.textContent = "Could not load messages. Check Supabase RLS.";
-      empty.style.display = "block";
-      setStatus("Database connection failed", "error");
-      return false;
     }
 
-    clearMessages();
-
-    if (!data || data.length === 0) {
-      empty.textContent = "No messages yet. Say hello 👋";
-      empty.style.display = "block";
-    } else {
-      data.forEach(row => addMessage(row.content));
+    function clearChat() {
+      chatBox.innerHTML = "";
     }
 
-    return true;
-  }
+    async function fetchMessages() {
+      const { data, error } = await supabaseClient
+        .from("messages")
+        .select("id, conversation_id, sender_id, content, created_at")
+        .eq("conversation_id", CONVERSATION_ID)
+        .order("created_at", { ascending: true });
 
-  async function sendMessage(text) {
-    const content = text.trim();
-    if (!content) return;
+      if (error) {
+        console.error("Fetch error:", error);
+        setStatus("Database connection failed", "error");
+        chatBox.innerHTML =
+          '<div class="empty">Could not load this conversation.</div>';
+        return;
+      }
 
-    sendButton.disabled = true;
-    input.disabled = true;
+      clearChat();
 
-    const { error } = await client
-      .from(TABLE)
-      .insert({
-        conversation_id: CONVERSATION_ID,
-        sender_id: SENDER_ID,
-        content: content
-      });
+      if (!data || data.length === 0) {
+        chatBox.innerHTML =
+          '<div class="empty" id="empty-state">Start a conversation with AVORA.</div>';
+        return;
+      }
 
-    if (error) {
-      console.error("Send error:", error);
-      setStatus("Message could not be sent — check Supabase RLS", "error");
-      alert("Message could not be sent.\n\n" + error.message);
-    } else {
+      data.forEach(renderMessage);
+    }
+
+    function shouldTriggerAI(text) {
+      return /(?:^|\\s)@avora\\b/i.test(text) || /(?:^|\\s)ai(?:\\b|[,.!?])/i.test(text);
+    }
+
+    // IMPORTANT:
+    // This is a deterministic local AVORA response generator.
+    // It does NOT call an LLM and therefore requires no secret API key.
+    // Replace this function later with a Supabase Edge Function call
+    // when you connect Gemini/OpenAI/etc. securely.
+    function generateAvoraResponse(userText) {
+      const text = userText.replace(/@avora/gi, "").trim();
+      const lower = text.toLowerCase();
+
+      if (lower.includes("hello") || lower.includes("hi ")) {
+        return "Hey. I’m AVORA. I’m here.";
+      }
+
+      if (lower.includes("who are you") || lower.includes("what are you")) {
+        return "I’m AVORA — your AI companion. This is the realtime foundation; the secure AI model can be connected next.";
+      }
+
+      if (lower.includes("help")) {
+        return "I’m listening. Tell me what you want to do, and we’ll take it one step at a time.";
+      }
+
+      if (lower.includes("thank")) {
+        return "Anytime. ❤️";
+      }
+
+      return "I’m AVORA. I received your message. The realtime AI trigger is working; the next layer can connect a real AI model securely.";
+    }
+
+    async function insertMessage(content, senderId) {
+      const { data, error } = await supabaseClient
+        .from("messages")
+        .insert([{
+          conversation_id: CONVERSATION_ID,
+          sender_id: senderId,
+          content: content
+        }])
+        .select("id, conversation_id, sender_id, content, created_at")
+        .single();
+
+      if (error) {
+        console.error("Insert error:", error);
+        throw error;
+      }
+
+      return data;
+    }
+
+    function showTyping() {
+      const row = document.createElement("div");
+      row.className = "message-row ai";
+      row.id = "typing-indicator";
+
+      const wrap = document.createElement("div");
+      wrap.className = "message-wrap";
+
+      const label = document.createElement("div");
+      label.className = "sender";
+      label.textContent = "AVORA AI";
+
+      const typing = document.createElement("div");
+      typing.className = "typing";
+      typing.innerHTML = "<span></span><span></span><span></span>";
+
+      wrap.appendChild(label);
+      wrap.appendChild(typing);
+      row.appendChild(wrap);
+      chatBox.appendChild(row);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function hideTyping() {
+      document.getElementById("typing-indicator")?.remove();
+    }
+
+    async function triggerAI(userText) {
+      if (aiBusy) return;
+
+      aiBusy = true;
+      showTyping();
+
+      try {
+        // Small delay makes the character feel conversational.
+        await new Promise(resolve => setTimeout(resolve, 650));
+
+        const response = generateAvoraResponse(userText);
+        await insertMessage(response, AI_SENDER);
+      } catch (error) {
+        console.error("AVORA response error:", error);
+      } finally {
+        hideTyping();
+        aiBusy = false;
+      }
+    }
+
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text || sendBtn.disabled) return;
+
+      sendBtn.disabled = true;
       input.value = "";
-      setStatus("Realtime connected", "ok");
-    }
+      input.style.height = "48px";
 
-    input.disabled = false;
-    sendButton.disabled = false;
-    input.focus();
-  }
+      try {
+        await insertMessage(text, USER_SENDER);
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    await sendMessage(input.value);
-  });
-
-  input.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      form.requestSubmit();
-    }
-  });
-
-  // Realtime: listen for new rows in public.messages.
-  client
-    .channel("avora-messages")
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: TABLE,
-        filter: "conversation_id=eq.public-avora-chat"
-      },
-      (payload) => {
-        const row = payload.new;
-        if (!row || row.content == null) return;
-
-        // Avoid duplicating a message that this browser already rendered
-        // through the database refresh.
-        addMessage(row.content);
-        setStatus("Realtime connected", "ok");
+        if (shouldTriggerAI(text)) {
+          await triggerAI(text);
+        }
+      } catch (error) {
+        console.error(error);
+        alert("Message could not be sent. Check Supabase RLS policies.");
+        input.value = text;
+      } finally {
+        sendBtn.disabled = false;
+        input.focus();
       }
-    )
-    .subscribe((state) => {
-      console.log("Realtime state:", state);
+    }
 
-      if (state === "SUBSCRIBED") {
-        setStatus("Realtime connected", "ok");
-      } else if (state === "CHANNEL_ERROR" || state === "TIMED_OUT") {
-        setStatus("Database connected • Realtime unavailable", "error");
+    composer.addEventListener("submit", event => {
+      event.preventDefault();
+      sendMessage();
+    });
+
+    input.addEventListener("keydown", event => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
       }
     });
 
-  // Initial load.
-  loadMessages().then(ok => {
-    if (ok) setStatus("Realtime connected", "ok");
-  });
-</script>
+    input.addEventListener("input", () => {
+      input.style.height = "48px";
+      input.style.height = Math.min(input.scrollHeight, 130) + "px";
+    });
+
+    async function connectRealtime() {
+      channel = supabaseClient
+        .channel("avora-messages-" + CONVERSATION_ID)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "messages",
+            filter: "conversation_id=eq." + CONVERSATION_ID
+          },
+          payload => {
+            // Render only messages not already rendered locally.
+            // The realtime event is the authoritative update for other tabs/devices.
+            renderMessage(payload.new);
+          }
+        )
+        .subscribe(status => {
+          if (status === "SUBSCRIBED") {
+            setStatus("Realtime connected", "ok");
+          } else if (status === "CHANNEL_ERROR") {
+            setStatus("Realtime error — check Supabase Realtime", "error");
+          } else if (status === "TIMED_OUT") {
+            setStatus("Realtime timed out", "error");
+          }
+        });
+    }
+
+    async function init() {
+      setStatus("Connecting…");
+      await fetchMessages();
+      await connectRealtime();
+    }
+
+    init();
+  </script>
 </body>
 </html>
