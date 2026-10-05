@@ -3,44 +3,49 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>AVORA Realtime Chat</title>
+  <title>AVORA Chat</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     * { box-sizing: border-box; }
 
-    body {
+    html, body {
       margin: 0;
       padding: 0;
+      width: 100%;
+      height: 100%;
       background: #121212;
       color: #fff;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
     .app {
-      min-height: 100dvh;
+      width: 100%;
       max-width: 650px;
-      margin: auto;
+      height: 100dvh;
+      margin: 0 auto;
       display: flex;
       flex-direction: column;
     }
 
     header {
+      flex: 0 0 auto;
       padding: 18px 16px 12px;
       text-align: center;
       border-bottom: 1px solid #292929;
     }
 
-    h2 {
+    h1 {
       margin: 0;
-      color: #6d68ff;
-      font-size: 22px;
+      color: #6d63ff;
+      font-size: 32px;
+      line-height: 1.2;
     }
 
     #status {
       margin-top: 6px;
-      font-size: 12px;
+      font-size: 15px;
       color: #888;
     }
 
@@ -55,6 +60,7 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+      -webkit-overflow-scrolling: touch;
     }
 
     .message {
@@ -63,6 +69,7 @@
       border-radius: 10px;
       word-break: break-word;
       max-width: 90%;
+      align-self: flex-start;
     }
 
     .empty {
@@ -72,6 +79,7 @@
     }
 
     .input-container {
+      flex: 0 0 auto;
       display: flex;
       gap: 8px;
       padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
@@ -82,110 +90,118 @@
     input {
       flex: 1;
       min-width: 0;
-      padding: 13px;
-      font-size: 16px;
-      border-radius: 10px;
-      border: 1px solid #333;
+      padding: 15px;
+      border: 1px solid #383838;
+      border-radius: 16px;
       background: #252525;
       color: #fff;
+      font-size: 17px;
       outline: none;
     }
 
-    input:focus { border-color: #6d68ff; }
-
-    button {
-      padding: 0 18px;
-      border: 0;
-      border-radius: 10px;
-      background: #4f46e5;
-      color: #fff;
-      font-size: 16px;
-      font-weight: 700;
+    input:focus {
+      border-color: #5b52ff;
     }
 
-    button:disabled { opacity: .55; }
+    button {
+      flex: 0 0 auto;
+      min-width: 120px;
+      border: 0;
+      border-radius: 16px;
+      padding: 0 22px;
+      background: #5146e5;
+      color: #fff;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 420px) {
+      h1 { font-size: 28px; }
+      button { min-width: 105px; padding: 0 16px; }
+    }
   </style>
 </head>
 
 <body>
   <div class="app">
+
     <header>
-      <h2>AVORA Chat</h2>
-      <div id="status">Connecting to Supabase...</div>
+      <h1>AVORA Chat</h1>
+      <div id="status">Connecting...</div>
     </header>
 
     <main id="chat-box">
-      <div class="empty">Loading messages...</div>
+      <div class="empty" id="empty">Loading messages...</div>
     </main>
 
-    <form class="input-container" id="chat-form">
+    <form class="input-container" id="message-form">
       <input
-        type="text"
         id="message-input"
+        type="text"
         placeholder="Type a message..."
         autocomplete="off"
         maxlength="2000"
       >
-      <button id="send-btn" type="submit">Send</button>
+      <button id="send-button" type="submit">Send</button>
     </form>
+
   </div>
 
   <script>
-    // ------------------------------------------------------------
-    // AVORA / SUPABASE CONFIG
-    // ------------------------------------------------------------
-    const SUPABASE_URL = "https://ubhqjnxwppjeyxouhzzb.supabase.co";
+    const SUPABASE_URL = "https://ublvdcrulqnbyxskzijj.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_DS6HKM82o--AQTr8H82gHA_ogLRAOwE";
 
-    const SUPABASE_ANON_KEY =
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InViaHFqbnh3cHBqZXl4b3VoenpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMDM5NjksImV4cCI6MjA1NjU3OTk2OX0.vWp3g8-G-T6d_wO4Y9bKx8n4l7m2x0c1v3b5n7m9l1k";
-
-    const client = window.supabase.createClient(
+    const { createClient } = supabase;
+    const client = createClient(
       SUPABASE_URL,
-      SUPABASE_ANON_KEY
+      SUPABASE_PUBLISHABLE_KEY
     );
 
     const chatBox = document.getElementById("chat-box");
-    const input = document.getElementById("message-input");
-    const sendBtn = document.getElementById("send-btn");
-    const form = document.getElementById("chat-form");
+    const empty = document.getElementById("empty");
     const statusEl = document.getElementById("status");
+    const form = document.getElementById("message-form");
+    const input = document.getElementById("message-input");
+    const sendButton = document.getElementById("send-button");
 
     function setStatus(text, type = "") {
       statusEl.textContent = text;
       statusEl.className = type;
     }
 
-    function clearEmpty() {
-      const empty = chatBox.querySelector(".empty");
-      if (empty) empty.remove();
+    function showEmpty(text) {
+      if (!document.querySelector(".message")) {
+        empty.textContent = text;
+        empty.style.display = "block";
+      }
     }
 
-    function appendMessage(text) {
+    function hideEmpty() {
+      empty.style.display = "none";
+    }
+
+    function addMessage(text) {
       if (!text) return;
 
-      clearEmpty();
+      hideEmpty();
 
       const div = document.createElement("div");
       div.className = "message";
-      div.textContent = text; // safe: does not interpret HTML
+
+      // Safe rendering: message text is never inserted as HTML.
+      div.textContent = text;
+
       chatBox.appendChild(div);
       chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    function showError(prefix, error) {
-      console.error(prefix, error);
-
-      const message =
-        error?.message ||
-        error?.details ||
-        error?.hint ||
-        "Unknown error";
-
-      setStatus(prefix, "error");
-      console.error("Details:", message);
-    }
-
-    async function fetchMessages() {
+    async function loadMessages() {
       try {
         const { data, error } = await client
           .from("messages")
@@ -193,84 +209,98 @@
 
         if (error) throw error;
 
-        chatBox.innerHTML = "";
+        chatBox.querySelectorAll(".message").forEach(el => el.remove());
 
         if (!data || data.length === 0) {
-          chatBox.innerHTML =
-            '<div class="empty">No messages yet.</div>';
-        } else {
-          data.forEach(row => appendMessage(row.message));
+          showEmpty("No messages yet. Send the first message.");
+          return;
         }
 
-        setStatus("Database connected", "ok");
-      } catch (error) {
-        chatBox.innerHTML =
-          '<div class="empty">Could not load messages. Check Supabase RLS/table settings.</div>';
+        data.forEach(row => addMessage(row.message));
 
-        showError("Database connection failed", error);
+      } catch (error) {
+        console.error("Load messages error:", error);
+        showEmpty("Could not load messages. Check Supabase RLS/table settings.");
+        setStatus("Database connection failed", "error");
       }
     }
 
-    async function sendMessage() {
-      const text = input.value.trim();
-      if (!text) return;
+    async function sendMessage(text) {
+      const message = text.trim();
+      if (!message) return;
 
-      sendBtn.disabled = true;
+      sendButton.disabled = true;
 
       try {
         const { error } = await client
           .from("messages")
-          .insert({ message: text });
+          .insert({ message });
 
         if (error) throw error;
 
         input.value = "";
         input.focus();
+
       } catch (error) {
-        showError("Message send failed", error);
-        alert(
-          "Message could not be sent.\n\n" +
-          (error?.message || "Unknown error")
-        );
+        console.error("Send message error:", error);
+        setStatus("Message could not be sent — check Supabase RLS", "error");
+        alert("Message could not be sent. Check the Supabase RLS policies.");
       } finally {
-        sendBtn.disabled = false;
+        sendButton.disabled = false;
       }
     }
 
-    form.addEventListener("submit", event => {
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      sendMessage();
+      await sendMessage(input.value);
     });
 
-    // Realtime INSERT listener
-    client
-      .channel("avora-messages")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages"
-        },
-        payload => {
-          if (payload?.new?.message) {
-            appendMessage(payload.new.message);
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        form.requestSubmit();
+      }
+    });
+
+    function connectRealtime() {
+      const channel = client
+        .channel("avora-messages")
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "messages"
+          },
+          (payload) => {
+            if (payload.new && payload.new.message) {
+              addMessage(payload.new.message);
+            }
           }
-        }
-      )
-      .subscribe(realtimeStatus => {
-        console.log("Realtime status:", realtimeStatus);
+        )
+        .subscribe((subscriptionStatus) => {
+          if (subscriptionStatus === "SUBSCRIBED") {
+            setStatus("Realtime connected", "ok");
+          } else if (
+            subscriptionStatus === "CHANNEL_ERROR" ||
+            subscriptionStatus === "TIMED_OUT" ||
+            subscriptionStatus === "CLOSED"
+          ) {
+            setStatus("Realtime error — check Realtime settings", "error");
+          }
+        });
 
-        if (realtimeStatus === "SUBSCRIBED") {
-          setStatus("Connected • Realtime ON", "ok");
-        } else if (realtimeStatus === "CHANNEL_ERROR") {
-          setStatus("Realtime error — check Realtime settings", "error");
-        } else if (realtimeStatus === "TIMED_OUT") {
-          setStatus("Realtime timed out", "error");
-        }
-      });
+      return channel;
+    }
 
-    fetchMessages();
+    async function startApp() {
+      setStatus("Connecting...");
+
+      await loadMessages();
+      connectRealtime();
+    }
+
+    startApp();
   </script>
 </body>
 </html>
